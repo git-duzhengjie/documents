@@ -1,5 +1,5 @@
 # 概览
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;kafka是一套分布式高性能消息缓冲集群系统，其中设计到的名词如下所示
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;kafka是一套分布式高性能消息缓冲集群系统，其中涉及到的名词如下所示
 
  >1. Topic：用于划分Message的逻辑概念，一个Topic可以分布在多个Broker上
  >2. Partition：是Kafka中横向扩展和一切并行化的基础，每个Topic都至少被切分为1个Partition
