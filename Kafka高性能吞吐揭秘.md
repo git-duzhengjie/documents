@@ -27,21 +27,21 @@
  >4. OS 再把数据从Buffer中Copy到网卡的Buffer上，这样完成一次发送
 
 
-![图片描述](/tfl/pictures/201806/tapd_22513131_1528081035_97.jpg)
+![图片描述](https://github.com/git-duzhengjie/documents/blob/master/image/1021389888-56442ffade963.jpg)
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;整个过程共经历两次Context Switch，四次System Call。同一份数据在内核Buffer与用户Buffer之间重复拷贝，效率低下。其中2、3两步没有必要，完全可以直接在内核区完成数据拷贝。这也正是Sendfile所解决的问题，经过Sendfile优化后，整个I/O过程就变成了下面这个样子。 
 
-![图片描述](/tfl/pictures/201806/tapd_22513131_1528081162_52.jpg)
+![图片描述](https://github.com/git-duzhengjie/documents/blob/master/image/4284736387-56443027674a2.jpg)
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;通过以上的介绍不难看出，Kafka的设计初衷是尽一切努力在内存中完成数据交换，无论是对外作为一整个消息系统，或是内部同底层操作系统的交互。如果Producer和Consumer之间生产和消费进度上配合得当，完全可以实现数据交换零I/O。这也就是我为什么说Kafka使用“硬盘”并没有带来过多性能损失的原因。下面是在生产环境中采到的一些指标。
 (20 Brokers, 75 Partitions per Broker, 110k msg/s) 
 
-![图片描述](/tfl/pictures/201806/tapd_22513131_1528081248_6.jpg)
+![图片描述](https://github.com/git-duzhengjie/documents/blob/master/image/1593922197-5644305578f81.jpg)
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;此时的集群只有写，没有读操作。10M/s左右的Send的流量是Partition之间进行Replicate而产生的。从recv和writ的速率比较可以看出，写盘是使用Asynchronous+Batch的方式，底层OS可能还会进行磁盘写顺序优化。而在有Read Request进来的时候分为两种情况，第一种是内存中完成数据交换。
 
  
-![图片描述](/tfl/pictures/201806/tapd_22513131_1528081402_80.jpg)
+![图片描述](https://github.com/git-duzhengjie/documents/blob/master/image/1537103758-564430720edc9.jpg)
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Send流量从平均10M/s增加到了到平均60M/s，而磁盘Read只有不超过50KB/s。PageCache降低磁盘I/O效果非常明显。接下来是读一些收到了一段时间，已经从内存中被换出刷写到磁盘上的老数据。 
 
-![图片描述](/tfl/pictures/201806/tapd_22513131_1528081464_85.jpg)
+![图片描述](https://github.com/git-duzhengjie/documents/blob/master/image/1836079238-56443081660f3.jpg)
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;其他指标还是老样子，而磁盘Read已经飚高到40+MB/s。此时全部的数据都已经是走硬盘了(对硬盘的顺序读取OS层会进行Prefill PageCache的优化)。依然没有任何性能问题。   
 __Tips__：
 
